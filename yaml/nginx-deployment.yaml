@@ -1,0 +1,23 @@
+apiVersion: apps/v1     # 必须，API的版本号
+kind: Deployment        # 必须，资源类型
+metadata:               # 必须，元数据信息
+  name: nginx           # 必须，指定Deployment的名称
+  namespace: soft       # 可选，如果不指定namespace，则默认使用default 空间
+  labels:               # 可选，用于过滤和区分pod
+    app: nginx
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 2           # 可选，指定副本集数量
+  selector:             # 定义Deployment如何找到要管理的Pod，与template的label相对应
+    matchLabels:
+      app: nginx-deployment
+  template:
+    metadata:
+      labels:
+        app: nginx-deployment      # 必须，使用label标记pod
+    spec:
+      containers:       # 必须，指定容器信息
+        - name: nginx
+          image: nginx:1.21.6   # 指定镜像及版本
+          ports:
+            - containerPort: 80  # 指定容器端口

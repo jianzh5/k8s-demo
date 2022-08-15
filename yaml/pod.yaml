@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: wb-web-front
+  name: wb-web-front
+  namespace: workbench   #对应自己项目的namespace
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wb-web-front
+  strategy:
+    rollingUpdate:
+      maxSurge: 50%
+      maxUnavailable: 50%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: wb-web-front
+    spec:
+      # 配置节点亲和性，只能允许在自己服务器
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: project.node
+                    operator: In
+                    values:
+                      - ltc
+      volumes:
+        - name: host-time
+          hostPath:
+            path: /etc/localtime
+            type: ''
+        - name: nginx-conf
+          configMap:
+            name: web-front-nginx # 与kubesphere节点保持一直
+            defaultMode: 420
+      imagePullSecrets:
+        - name: ifly-workbench-hub  #提前在项目下配置访问镜像仓库的账号密码
+      containers:
+        - image: $REGISTRY/$DOCKERHUB_NAMESPACE/wb-web-front:$IMAGE_VERSION  # 选择镜像
+          imagePullPolicy: Always
+          name: app
+          ports:
+            - containerPort: 80
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 200m
+              memory: 500Mi
+            limits:
+              cpu: 500m
+              memory: 1500Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - name: nginx-conf
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30

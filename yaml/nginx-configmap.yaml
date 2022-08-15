@@ -1,0 +1,35 @@
+apiVersion: v1     # 必须，API的版本号
+kind: ConfigMap        # 必须，资源类型
+metadata:               # 必须，元数据信息
+  name: web-nginx-conf           # 必须，指定Deployment的名称
+  namespace: cloud-demo       # 可选，如果不指定namespace，则默认使用default 空间
+data:
+  nginx.conf: |
+    worker_processes  4;
+    events {
+      worker_connections  1024;
+    }
+    
+    http {
+      include       mime.types;
+      default_type  application/octet-stream;
+      sendfile        on;
+      keepalive_timeout  65;
+      
+      server {
+        listen       8088;
+        server_name  _;
+        
+        location / {
+          root   /usr/share/nginx/html;
+          try_files $uri $uri/ /index.html;
+          index  index.html index.htm;
+        }
+      
+        error_page   500 502 503 504  /50x.html;
+      
+        location = /50x.html {
+          root   html;
+        }
+      }
+    }

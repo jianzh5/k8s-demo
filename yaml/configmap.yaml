@@ -1,0 +1,52 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: web-admin-nginx
+  namespace: workbench
+  annotations:
+    kubesphere.io/alias-name: 后端Nginx配置
+    kubesphere.io/description: 后端Nginx配置
+data:
+  nginx.conf: |
+    worker_processes  4;
+    pid /run/nginx.pid;
+    events {
+        use epoll;
+        worker_connections  1024;
+    }
+    
+    http {
+        include       mime.types;
+        default_type  application/octet-stream;
+        sendfile        on;
+        keepalive_timeout  65;
+        client_max_body_size 50M;
+
+        server {
+            listen       80;
+            server_name  _;
+    
+            # 开启解压缩静态文件  前端打包要生成 .gz 文件
+            gzip_static on;
+            charset utf-8;
+            location / {
+                root   /usr/share/nginx/html;
+                try_files $uri $uri/ /index.html;
+                index  index.html index.htm;
+            }
+
+            error_page   400 404 413 500 502 503 504  /50x.html;
+
+            location = /50x.html {
+                root   html;
+            }
+    
+            location /wb-api/{
+                proxy_set_header Host $http_host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header REMOTE-HOST $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_pass http://workbench-gateway-service.workbench:9998/;
+            }
+        }
+    }

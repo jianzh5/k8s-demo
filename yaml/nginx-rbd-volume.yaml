@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: volume-rbd-demo
+  namespace: cloud-demo
+  labels:
+    app: nginx
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-volume
+  template:
+    metadata:
+      labels:
+        app: nginx-volume
+    spec:
+      containers:       # 必须，指定容器信息
+        - name: nginx
+          image: nginx:1.21.6   # 指定镜像及版本
+          ports:
+            - containerPort: 80  # 指定容器端口
+          volumeMounts:
+            - name: rbd-demo
+              mountPath: /data
+      volumes:
+        - name: rbd-demo
+          persistentVolumeClaim:
+            claimName: nginx-rbd-pvc

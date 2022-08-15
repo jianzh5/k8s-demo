@@ -1,0 +1,20 @@
+apiVersion: v1          # 必须，API的版本号
+kind: Service           # 必须，资源类型
+metadata:               # 必须，元数据信息
+  name: nginx-service   # 必须，指定Service的名称
+  namespace: soft # 可选，如果不指定namespace，则默认使用default 空间
+  labels:               # 可选，用于过滤和区分pod
+    app: nginx-service
+spec:
+  selector:
+    app: nginx-deployment
+  type: NodePort
+  ports:
+    - port: 8088        # service端口
+      targetPort: 80    # pod端口
+      protocol: TCP     # Kubernetes Service 能够支持 TCP 和 UDP 协议，不指定此协议 默认为TCP 协议。
+      nodePort: 32268   # 外部访问地址
+
+
+
+
