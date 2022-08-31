@@ -35,6 +35,4 @@ public class Demo1Application {
     public String sayHello(){
         return "hello:"+userName;
     }
-
-
 }

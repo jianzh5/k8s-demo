@@ -2,7 +2,7 @@
 FROM openjdk:8-jre-alpine
 
 # 设置JVM变量，可以通过外部修改JVM参数，如果将环境变量写在这里而非deployment.yaml上一定要限制Pod的资源，如果没限制就死翘翘
-ENV JVM_OPTS "-server.port=8080"
+ENV JVM_OPTS "-Dserver.port=8080"
 
 # Java参数
 ENV JAVA_OPTS "-Dfile.encoding=utf8 -Djava.security.egd=file:/dev/./urandom"
