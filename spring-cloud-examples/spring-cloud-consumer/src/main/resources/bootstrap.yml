@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: consumer-service
+  cloud:
+    nacos:
+      server-addr: 172.30.12.242:30848
+      discovery:
+        enabled: true
+        fail-fast: true
+server:
+  port: 8089
