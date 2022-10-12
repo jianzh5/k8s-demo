@@ -1,0 +1,180 @@
+pipeline {
+  agent {
+    node {
+      label 'maven'
+    }
+
+  }
+  stages {
+    stage('拉取代码') {
+      agent none
+      steps {
+        container('maven') {
+          git(credentialsId: 'git-ifly', url: 'https://git.iflytek.com/XXB_LTC/wb-boot.git', branch: 'dev', changelog: true, poll: false)
+        }
+
+      }
+    }
+
+    stage('项目编译') {
+      agent none
+      steps {
+    	container('maven') {
+    	  sh '''
+            cd spring-cloud-examples
+    	    mvn clean package -Dmaven.test.skip=true -Dmaven.javadoc.skip=true
+    	    ls spring-cloud-gateway/target
+    	  '''
+    	}
+      }
+    }
+
+    stage('default-2') {
+      parallel {
+        stage('构建cloud-gateway镜像') {
+          agent none
+          steps {
+            container('maven') {
+              sh 'docker build -t spring-cloud-gateway:$BUILD_NUMBER -f spring-cloud-examples/spring-cloud-gateway/Dockerfile ./spring-cloud-examples/spring-cloud-gateway/'
+            }
+          }
+        }
+
+        stage('构建cloud-consumer镜像') {
+          agent none
+          steps {
+            container('maven') {
+              sh 'docker build -t spring-cloud-provider:$BUILD_NUMBER -f spring-cloud-examples/spring-cloud-provider/Dockerfile ./spring-cloud-examples/spring-cloud-provider/'
+            }
+
+          }
+        }
+
+        stage('构建cloud-provider镜像') {
+          agent none
+          steps {
+            container('maven') {
+              sh 'docker build -t spring-cloud-consumer:$BUILD_NUMBER -f spring-cloud-examples/spring-cloud-consumer/Dockerfile ./spring-cloud-examples/spring-cloud-consumer/'
+            }
+          }
+        }
+      }
+    }
+
+    stage('default-3') {
+      parallel {
+        stage('推送cloud-gateway镜像') {
+          agent none
+          steps {
+            container('maven') {
+              withCredentials([usernamePassword(credentialsId : 'docker-secret' ,passwordVariable : 'DOCKER_PWD_VAR' ,usernameVariable : 'DOCKER_USER_VAR' ,)]) {
+                sh '''
+                echo "$DOCKER_PWD_VAR" | docker login $REGISTRY -u "$DOCKER_USER_VAR" --password-stdin'
+                docker tag spring-cloud-gateway:$BUILD_NUMBER $REGISTRY/$DOCKERHUB_NAMESPACE/spring-cloud-gateway:$BUILD_NUMBER
+                docker push $REGISTRY/$DOCKERHUB_NAMESPACE/spring-cloud-gateway:$BUILD_NUMBER
+                '''
+              }
+
+            }
+
+          }
+        }
+
+        stage('推送cloud-consumer镜像') {
+          agent none
+          steps {
+            container('maven') {
+              withCredentials([usernamePassword(credentialsId : 'docker-secret' ,passwordVariable : 'DOCKER_PWD_VAR' ,usernameVariable : 'DOCKER_USER_VAR' ,)]) {
+                sh '''
+                echo "$DOCKER_PWD_VAR" | docker login $REGISTRY -u "$DOCKER_USER_VAR" --password-stdin
+                docker tag spring-cloud-consumer:$BUILD_NUMBER $REGISTRY/$DOCKERHUB_NAMESPACE/spring-cloud-consumer:$BUILD_NUMBER
+                docker push $REGISTRY/$DOCKERHUB_NAMESPACE/spring-cloud-consumer:$BUILD_NUMBER
+                '''
+              }
+
+            }
+
+          }
+        }
+
+        stage('推送cloud-provider镜像') {
+          agent none
+          steps {
+            container('maven') {
+              withCredentials([usernamePassword(credentialsId : 'docker-secret' ,passwordVariable : 'DOCKER_PWD_VAR' ,usernameVariable : 'DOCKER_USER_VAR' ,)]) {
+                sh '''
+                echo "$DOCKER_PWD_VAR" | docker login $REGISTRY -u "$DOCKER_USER_VAR" --password-stdin
+                docker tag spring-cloud-provider:$BUILD_NUMBER $REGISTRY/$DOCKERHUB_NAMESPACE/spring-cloud-provider:$BUILD_NUMBER
+                docker push $REGISTRY/$DOCKERHUB_NAMESPACE/spring-cloud-provider:$BUILD_NUMBER
+                '''
+              }
+            }
+          }
+        }
+      }
+    }
+
+    stage('default-4') {
+      parallel {
+        stage('部署cloud-gateway服务') {
+          agent none
+          steps {
+            container('maven') {
+              withCredentials([
+                kubeconfigFile(
+                    credentialsId : env.KUBECONFIG_CREDENTIAL_ID ,
+                    variable : 'KUBECONFIG'
+                    )
+                ]) {
+                sh 'envsubst < spring-cloud-examples/spring-cloud-gateway/deploy.yaml | kubectl apply -f -'
+              }
+            }
+          }
+        }
+
+        stage('部署cloud-consumer服务') {
+          agent none
+          steps {
+            container('maven') {
+              withCredentials([
+                kubeconfigFile(
+                    credentialsId : env.KUBECONFIG_CREDENTIAL_ID ,
+                    variable : 'KUBECONFIG'
+                    )
+                ]) {
+                sh 'envsubst < spring-cloud-examples/spring-cloud-consumer/deploy.yaml | kubectl apply -f -'
+              }
+            }
+          }
+        }
+
+        stage('部署cloud-provider服务') {
+          agent none
+          steps {
+            container('maven') {
+              withCredentials([
+                kubeconfigFile(
+                    credentialsId : env.KUBECONFIG_CREDENTIAL_ID ,
+                    variable : 'KUBECONFIG'
+                    )
+                ]) {
+                sh 'envsubst < spring-cloud-examples/spring-cloud-provider/deploy.yaml | kubectl apply -f -'
+              }
+            }
+          }
+        }
+
+      }
+    }
+  }
+  environment {
+    REGISTRY = 'artifacts.iflytek.com/xxb-docker-private'
+    DOCKERHUB_NAMESPACE = 'rjzxk8s'
+    KUBECONFIG_CREDENTIAL_ID = 'cloud-kubeconfig'
+  }
+
+//  parameters {
+//    string(name: 'TAG_NAME', defaultValue: '', description: '')
+//  }
+
+}

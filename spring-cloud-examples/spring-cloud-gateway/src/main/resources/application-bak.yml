@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: spring-cloud-gateway
+  cloud:
+    nacos:
+      server-addr: 172.30.12.242:30848
+      discovery:
+        enabled: true
+        fail-fast: true
+      config:
+        file-extension: yml
+    gateway:
+      discovery:
+        locator:
+          enabled: true # 设置为true 请求路径前可以添加微服务名称 表明gateway开启服务注册和发现的功能，并且spring cloud gateway自动根据服务发现为每一个服务创建了一个router，# 这个router将以服务名开头的请求路径转发到对应的服务
+          lower-case-service-id: true
+      routes:
+        - id: spring-cloud-provider
+          uri: lb://spring-cloud-provider
+          predicates:
+            - Path=/cloud-provider/**
+        - id: spring-cloud-consumer
+          uri: lb://spring-cloud-consumer
+          predicates:
+            - Path=/cloud-consumer/**
+      default-filters:
+        - StripPrefix=1
+server:
+  port: 8090
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+      base-path: /  # 访问路径中没有actuator http://localhost:8080/prometheus
+  metrics:
+    tags:
+      application: ${spring.application.name}
+

@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: spring-cloud-provider
+  name: spring-cloud-provider-deployment
+  namespace: cloud-demo   #对应自己项目的namespace
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spring-cloud-provider
+  strategy:
+    rollingUpdate:
+      maxSurge: 50%
+      maxUnavailable: 50%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: spring-cloud-provider
+    spec:
+      volumes:
+        - name: host-time
+          hostPath:
+            path: /etc/localtime
+            type: ''
+      imagePullSecrets:
+        - name: docker-registry-cloud  #提前在项目下配置访问镜像仓库的账号密码
+      containers:
+        - image: artifacts.iflytek.com/xxb-docker-private/rjzxk8s/spring-cloud-provider:v1.0  # 选择镜像
+          imagePullPolicy: Always
+          name: app
+          ports:
+            - containerPort: 8088
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 200m
+              memory: 500Mi
+            limits:
+              cpu: 500m
+              memory: 1500Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: spring-cloud-provider-service
+  name: spring-cloud-provider-service
+  namespace: cloud-demo   #对应自己项目的namespace
+spec:
+  ports:
+    - name: tcp-8080
+      port: 8080 # 服务访问端口
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: spring-cloud-provider

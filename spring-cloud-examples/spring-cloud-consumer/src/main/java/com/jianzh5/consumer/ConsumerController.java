@@ -1,4 +1,4 @@
-package com.jianzh5.provider;
+package com.jianzh5.consumer;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -10,10 +10,12 @@ import org.springframework.web.bind.annotation.RestController;
  * @date 2022/8/31 22:09
  */
 @RestController
-@RequestMapping("provider")
-public class DemoConrtoller {
-    @GetMapping("hello")
+@RequestMapping("consumer")
+public class ConsumerController {
+
+    @GetMapping("say")
     public String say(){
-        return "Hello,World!";
+        return "Hello,I'am Consumer!";
     }
+
 }

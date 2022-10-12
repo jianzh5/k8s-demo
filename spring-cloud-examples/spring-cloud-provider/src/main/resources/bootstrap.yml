@@ -1,9 +1,13 @@
 spring:
+  profiles:
+    active: dev
   application:
-    name: provider-service
+    name: spring-cloud-provider
   cloud:
     nacos:
       server-addr: 172.30.12.242:30848
       discovery:
         enabled: true
         fail-fast: true
+      config:
+        file-extension: yml
